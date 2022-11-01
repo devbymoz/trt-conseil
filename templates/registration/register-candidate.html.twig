@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Créer un compte candidat{% endblock %}
+{% block title_h1 %}CANDIDAT{% endblock %}
+
+{% block body %}
+    <h2 class="text-center">Créer votre compte candidat</h2>
+    <p class="text-center">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+
+    {% for flash_error in app.flashes('verify_email_error') %}
+        <div class="alert alert-danger" role="alert">{{ flash_error }}</div>
+    {% endfor %}
+    <div class="mt-3">
+        {{ form_start(registrationForm) }}
+            <div class="input-group input-group-lg mb-3">
+                {{ form_widget(registrationForm.firstname) }}
+            </div>
+            {{ form_errors(registrationForm.firstname) }}
+
+            <div class="input-group input-group-lg mb-3">
+                {{ form_widget(registrationForm.lastname) }}
+            </div>
+            {{ form_errors(registrationForm.lastname) }}
+
+            <div class="input-group input-group-lg mb-3">
+                {{ form_widget(registrationForm.user.email) }}
+            </div>
+            {{ form_errors(registrationForm.user.email) }}
+
+            <div class="input-group input-group-lg mb-3">
+                {{ form_widget(registrationForm.user.plainPassword.first) }}
+            </div>
+            {{ form_errors(registrationForm.user.plainPassword.first) }}
+
+            <div class="input-group input-group-lg mb-3">
+                {{ form_widget(registrationForm.user.plainPassword.second) }}
+            </div>
+            {{ form_errors(registrationForm.user.plainPassword.second) }}
+
+            <button type="submit" class="btn btn-primary btn-lg">Créer mon compte</button>
+        {{ form_end(registrationForm) }}
+    </div>
+{% endblock %}
