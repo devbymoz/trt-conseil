@@ -23,6 +23,11 @@
             {{ form_errors(registrationForm.lastname) }}
 
             <div class="input-group input-group-lg mb-3">
+                {{ form_row(registrationForm.cv) }}
+            </div>
+            {{ form_errors(registrationForm.cv) }}
+
+            <div class="input-group input-group-lg mb-3">
                 {{ form_widget(registrationForm.user.email) }}
             </div>
             {{ form_errors(registrationForm.user.email) }}
