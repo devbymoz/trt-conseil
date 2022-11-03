@@ -22,11 +22,16 @@ class RegistrationController extends AbstractController
     #[Route('/register-candidate', name: 'app_register_candidate')]
     public function registerCandidate(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, MailerInterface $mailer, LoggerInterface $logger): Response
     {
+        if ($this->getUser()) {
+            return $this->redirectToRoute('app_login');
+        }
+        
         $user = new User();
         $repoUser = $entityManager->getRepository(User::class);
 
         $candidate = new Candidate();
         $form = $this->createForm(CreateCandidateType::class, $candidate);
+        $form->remove('cv');
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -98,6 +103,10 @@ class RegistrationController extends AbstractController
     #[Route('/register-company', name: 'app_register_company')]
     public function registerCompany(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, MailerInterface $mailer, LoggerInterface $logger): Response
     {
+        if ($this->getUser()) {
+            return $this->redirectToRoute('app_login');
+        }
+
         $user = new User();
         $repoUser = $entityManager->getRepository(User::class);
 
@@ -138,7 +147,7 @@ class RegistrationController extends AbstractController
                     $sendEmail->replyTo('noreply@trtconseil.com');
                     $sendEmail->subject('Un nouveau recruteur doit être validé');
                     $sendEmail->context([
-                        'userID' => $user->getID(),
+                        'user' => $user,
                     ]);
                     $sendEmail->htmlTemplate('registration/confirmation_email.html.twig');
                     $mailer->send($sendEmail);

@@ -1,0 +1,26 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des recruteurs{% endblock %}
+{% block title_h1 %}Liste des recruteurs{% endblock %}
+
+{% block body %}
+    <section class="row mt-5">
+        {% for company in companies %}
+        <div class="col-sm-6 mb-3">
+            <div class="card">
+                <img class="card-img-top" src="https://placehold.jp/286x180.png" alt="Card image cap">
+                <div class="card-body">
+                    <h5 class="card-title">{{ company.name }}</h5>
+                    <p class="card-text">Lorem ipsum dolor sit amet consectetur, adipisicing elit. Ad labore aliquid eos quo soluta sapiente dolore.</p>
+                    {% if company.user.active == 0 %}
+                        <p class="text-danger">Ce compte n'est pas activé</p>
+                    {% endif %}
+                    <a class="btn btn-primary" href="{{ path('app_company_profil', {id: company.user.id}) }}" role="button">Voir le détail</a>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+    </section>
+{% endblock %}
+
+

@@ -3,30 +3,28 @@
 namespace App\Controller;
 
 use App\Entity\User;
-use App\Form\CreateCandidateType;
+use App\Form\CreateCompanyType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
-use Symfony\Component\String\Slugger\SluggerInterface;
 use Psr\Log\LoggerInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 
 
-#[Route('/candidate')]
-#[IsGranted('ROLE_CANDIDATE')]
-class CandidateController extends AbstractController
+#[Route('/company')]
+#[IsGranted('ROLE_COMPANY')]
+class CompanyController extends AbstractController
 {
-    #[Route('/profil/{id<\d+>}', name: 'app_candidate_profil')]
+    #[Route('/profil/{id<\d+>}', name: 'app_company_profil')]
     public function profil(
         $id,
         Request $request,
         ManagerRegistry $doctrine,
-        SluggerInterface $slugger,
         LoggerInterface $logger
     ): Response {
         $em = $doctrine->getManager();
@@ -45,49 +43,14 @@ class CandidateController extends AbstractController
             throw $this->createNotFoundException('Vous ne pouvez pas accéder à cette page');
         }
 
-        $candidate = $user->getCandidate();
-        $form = $this->createForm(CreateCandidateType::class, $candidate, [
+        $company = $user->getCompany();
+        $form = $this->createForm(CreateCompanyType::class, $company, [
             'validation_groups' => ['Default'],
         ]);
         $form->remove('user');
         $form->handleRequest($request);
 
-        // Path du CV
-        $cvDirectory = $this->getParameter('cv_directory');
-        $currentCv = $user->getCandidate()->getCv();
-        $pathCv = $cvDirectory . '/' . $currentCv;
-
-        
         if ($form->isSubmitted() && $form->isValid()) {
-            $cv = $form->get('cv')->getData();
-            if ($cv) {
-                $originalFilename = pathinfo($cv->getClientOriginalName(), PATHINFO_FILENAME);
-                // this is needed to safely include the file name as part of the URL
-                $safeFilename = $slugger->slug($originalFilename);
-                $newFilename = $safeFilename . '-' . uniqid() . '.' . $cv->guessExtension();
-
-                try {
-                    $cv->move(
-                        $cvDirectory,
-                        $newFilename
-                    );
-                } catch (FileException $e) {
-                    $errorNumber = uniqid();
-                    $logger->error('Erreur d\'ajout de CV', [
-                        'errorNumber' => $errorNumber,
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
-                    ]);
-                }
-
-                // Suppression de l'ancien CV du serveur.
-                if (file_exists($pathCv) && $currentCv != null) {
-                    unlink($pathCv);
-                }
-                
-                $candidate->setCV($newFilename);
-            }
-
             try {
                 $em->flush();
 
@@ -98,7 +61,7 @@ class CandidateController extends AbstractController
                 );
             } catch (\Exception $e) {
                 $errorNumber = uniqid();
-                $logger->error('Erreur modification du compte candidat', [
+                $logger->error('Erreur modification du compte recruteur', [
                     'errorNumber' => $errorNumber,
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
@@ -110,16 +73,18 @@ class CandidateController extends AbstractController
             }
         }
 
-        return $this->render('candidate/profil.html.twig', [
+        return $this->render('company/profil.html.twig', [
             'registrationForm' => $form->createView(),
-            'candidate' => $candidate
+            'company' => $company
         ]);
     }
 
 
-    #[Route('/profil/{id<\d+>}/activate', name: 'app_candidate_activate')]
+
+
+    #[Route('/profil/{id<\d+>}/activate', name: 'app_company_activate')]
     #[IsGranted('ROLE_CONSULTANT')]
-    public function activateCandidate(
+    public function activateCompany(
         $id,
         ManagerRegistry $doctrine,
         LoggerInterface $logger,
@@ -151,7 +116,7 @@ class CandidateController extends AbstractController
             $sendEmail->to($user->getEmail());
             $sendEmail->replyTo('noreply@trtconseil.com');
             $sendEmail->subject('Votre compte est activé');
-            $sendEmail->text('Votre compte candidat a bien été activé, vous pouvez vous connecter pour entrer en contact avec des recruteurs.');
+            $sendEmail->text('Votre compte recruteur a bien été activé, vous pouvez vous connecter pour entrer en contact avec des recruteurs.');
             $mailer->send($sendEmail);
 
             $this->addFlash(
@@ -160,7 +125,7 @@ class CandidateController extends AbstractController
             );
         } catch (\Exception $e) {
             $errorNumber = uniqid();
-            $logger->error('Erreur d\'activation candidat', [
+            $logger->error('Erreur d\'activation recruteur', [
                 'errorNumber' => $errorNumber,
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
@@ -171,11 +136,8 @@ class CandidateController extends AbstractController
             );
         }
 
-        return $this->redirectToRoute('app_candidate_profil', ['id' => $id]);
+        return $this->redirectToRoute('app_company_profil', ['id' => $id]);
     }
-
-
-
 
 
 }
