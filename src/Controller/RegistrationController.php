@@ -62,7 +62,7 @@ class RegistrationController extends AbstractController
                     $sendEmail->replyTo('noreply@trtconseil.com');
                     $sendEmail->subject('Un nouveau candidat doit être validé');
                     $sendEmail->context([
-                        'userID' => $user->getID(),
+                        'user' => $user,
                     ]);
                     $sendEmail->htmlTemplate('registration/confirmation_email.html.twig');
                     $mailer->send($sendEmail);

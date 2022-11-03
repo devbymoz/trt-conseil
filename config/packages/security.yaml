@@ -47,7 +47,7 @@ security:
 
     role_hierarchy:
         ROLE_CONSULTANT: ROLE_CONSULTANT
-        ROLE_SUPER_ADMIN: [ROLE_ADMIN, ROLE_CONSULTANT, ROLE_CANDIDAT, ROLE_RECRUTEUR]
+        ROLE_ADMIN: [ROLE_ADMIN, ROLE_CONSULTANT, ROLE_CANDIDAT, ROLE_RECRUTEUR]
 
 when@test:
     security:
@@ -58,6 +58,4 @@ when@test:
             # reduces the work factor to the lowest possible values.
             Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
                 algorithm: auto
-                cost: 4 # Lowest possible value for bcrypt
-                time_cost: 3 # Lowest possible value for argon
-                memory_cost: 10 # Lowest possible value for argon
+                cost: 15            

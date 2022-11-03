@@ -22,7 +22,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 180, unique: true)]
-    #[Assert\NotBlank]
+    //#[Assert\NotBlank]
+    #[Assert\NotBlank(groups: ['registration'])]
     #[Assert\Email(
         message: 'L\'email {{ value }} n\'est pas un email valide',
     )]
@@ -43,8 +44,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?bool $active = null;
 
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
-/*     #[Assert\NotBlank]
-    #[Assert\NotNull] */
+    #[Assert\NotBlank]
+    #[Assert\NotNull]
     private ?Candidate $candidate = null;
 
     #[ORM\Column]
@@ -53,6 +54,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
     private ?Company $company = null;
     
+    private ?string $plainPassword = null;
+
     /**
      * À l'instanciation d'un nouvel utilisateur, on initialise :
      * - la date de création
@@ -130,8 +133,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function eraseCredentials()
     {
-        // If you store any temporary, sensitive data on the user, clear it here
-        // $this->plainPassword = null;
+        $this->plainPassword = null;
     }
 
     public function isActive(): ?bool
@@ -190,5 +192,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->company = $company;
 
         return $this;
+    }
+
+    public function getPlainPassword()
+    {
+        return $this->plainPassword;
+    }
+
+    public function setPlainPassword($plainPassword)
+    {
+        $this->plainPassword = $plainPassword;
+
+        // forces the object to look "dirty" to Doctrine. Avoids
+        // Doctrine *not* saving this entity, if only plainPassword changes
+        $this->password = null;
     }
 }
