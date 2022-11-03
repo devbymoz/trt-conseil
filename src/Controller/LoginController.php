@@ -14,7 +14,9 @@ class LoginController extends AbstractController
     {
         // Si l'utilisateur est connecté, on le redirige vers la page profil
         if ($this->getUser()) {
-            if ($this->isGranted('ROLE_CONSULTANT')) {
+            if ($this->isGranted('ROLE_ADMIN')) {
+                return $this->redirectToRoute('app_admin');
+            } else if ($this->isGranted('ROLE_CONSULTANT')) {
                 return $this->redirectToRoute('app_consultant');
             } else if ($this->isGranted('ROLE_CANDIDATE')) {
                 return $this->redirectToRoute('app_candidate_profil', ['id' => $this->getUser()->getId()]);

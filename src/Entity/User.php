@@ -22,8 +22,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 180, unique: true)]
-    //#[Assert\NotBlank]
-    #[Assert\NotBlank(groups: ['registration'])]
+    #[Assert\NotBlank]
     #[Assert\Email(
         message: 'L\'email {{ value }} n\'est pas un email valide',
     )]
@@ -37,15 +36,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @var string The hashed password
      */
-    #[ORM\Column]
+    #[ORM\Column(nullable: true)]
     private ?string $password = null;
 
     #[ORM\Column]
     private ?bool $active = null;
 
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
-    #[Assert\NotBlank]
-    #[Assert\NotNull]
     private ?Candidate $candidate = null;
 
     #[ORM\Column]
@@ -55,6 +52,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?Company $company = null;
     
     private ?string $plainPassword = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $token = null;
 
     /**
      * À l'instanciation d'un nouvel utilisateur, on initialise :
@@ -206,5 +206,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         // forces the object to look "dirty" to Doctrine. Avoids
         // Doctrine *not* saving this entity, if only plainPassword changes
         $this->password = null;
+    }
+
+    public function getToken(): ?string
+    {
+        return $this->token;
+    }
+
+    public function setToken(?string $token): self
+    {
+        $this->token = $token;
+
+        return $this;
     }
 }
