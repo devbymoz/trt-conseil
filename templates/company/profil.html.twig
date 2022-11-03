@@ -1,0 +1,42 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Profil recruteur{% endblock %}
+{% block title_h1 %}Profil recruteur{% endblock %}
+
+{% block body %}
+    <h2 class="text-center">{{ company.name }}</h2>
+    <p class="text-center">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+
+    {% for flash_error in app.flashes('verify_email_error') %}
+        <div class="alert alert-danger" role="alert">{{ flash_error }}</div>
+    {% endfor %}
+
+    {% if company.user.active == 0 and is_granted('ROLE_CONSULTANT') %}
+        <div class="text-center">
+            <h3>Ce compte n'a pas encore été activé</h3>
+            <a class="btn btn-warning confirm-js" href="{{ path('app_company_activate', {id:company.user.id}) }}" role="button">Activer ce compte</a>
+        </div>
+    {% endif %}
+
+    <div class="mt-4">
+        {{ form_start(registrationForm) }}
+            <div class="input-group input-group-lg mb-3">
+                {{ form_widget(registrationForm.name) }}
+            </div>
+            {{ form_errors(registrationForm.name) }}
+
+            <div class="input-group input-group-lg mb-3">
+                {{ form_widget(registrationForm.address) }}
+            </div>
+            {{ form_errors(registrationForm.address) }}
+
+            <div class="input-group input-group-lg mb-3">
+                <input type="email" class="form-control" value="{{ company.user.email }}" disabled="disabled">
+            </div>
+             
+            {{ form_row(registrationForm._token) }}
+
+            <button type="submit" class="btn btn-primary btn-lg">Modifier mon compte</button>
+        {{ form_end(registrationForm, {render_rest: false}) }}
+    </div>
+{% endblock %}

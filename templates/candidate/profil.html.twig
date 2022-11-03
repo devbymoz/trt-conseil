@@ -14,11 +14,16 @@
     {% if candidate.user.active == 0 and is_granted('ROLE_CONSULTANT') %}
         <div class="text-center">
             <h3>Ce compte n'a pas encore été activé</h3>
-            <a class="btn btn-warning" href="{{ path('app_candidate_activate', {id:candidate.user.id}) }}" role="button">Activer ce compte</a>
+            <a class="btn btn-warning confirm-js" href="{{ path('app_candidate_activate', {id:candidate.user.id}) }}" role="button">Activer ce compte</a>
         </div>
     {% endif %}
 
-    <div class="mt-3">
+    <div class="mon-cv mb-3 text-center">
+        {% if candidate.cv != null %}
+            <a href="/cv/{{ candidate.cv }}">Voir mon CV</a>
+        {% endif %}
+    </div>
+    <div class="mt-4">
         {{ form_start(registrationForm) }}
             <div class="input-group input-group-lg mb-3">
                 {{ form_widget(registrationForm.firstname) }}
@@ -34,19 +39,13 @@
                 <input type="email" class="form-control" value="{{ candidate.user.email }}" disabled="disabled">
             </div>
 
-            <div class="mb-2">
+            <div class="mb-3">
                 {{ form_row(registrationForm.cv) }}
-            </div>
-
-            <div class="mon-cv mb-3">
-                 {% if candidate.cv != null %}
-                    <a href="/cv/{{ candidate.cv }}">Voir mon CV actuel</a>
-                 {% endif %}
             </div>
 
             {{ form_row(registrationForm._token) }}
 
-            <button type="submit" class="btn btn-primary btn-lg">Modifier mon CV</button>
+            <button type="submit" class="btn btn-primary btn-lg">Modifier mon compte</button>
         {{ form_end(registrationForm, {render_rest: false}) }}
     </div>
 {% endblock %}

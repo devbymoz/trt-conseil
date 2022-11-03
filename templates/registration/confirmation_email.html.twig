@@ -3,8 +3,10 @@
     Veuillez vérifier le candidat suivant : <br><br>
     {% if 'ROLE_CANDIDATE' in user.roles|first %}
         <a href="{{ absolute_url(path('app_candidate_profil', {'id' : user.id})) }}" role="button">Voir le candidat</a>
-    {% elseif 'ROLE_COMPANY' in user.roles|first %}
-        {# <a href="{{ path('app_candidate_profil', {id:user.id}) }}" role="button">Voir le recruteur</a> #}
+    {% endif %}
+        
+    {% if 'ROLE_COMPANY' in user.roles|first %}
+        <a href="{{ absolute_url(path('app_company_profil', {'id' : user.id})) }}" role="button">Voir le candidat</a>
     {% endif %}
 
 </p>

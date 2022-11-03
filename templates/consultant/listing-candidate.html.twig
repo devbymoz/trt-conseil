@@ -1,0 +1,26 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des candidats{% endblock %}
+{% block title_h1 %}Liste des candidats{% endblock %}
+
+{% block body %}
+    <section class="row mt-5">
+        {% for candidate in candidates %}
+        <div class="col-sm-6">
+            <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ candidate.firstname }} {{ candidate.lastname }}</h5>
+                <p class="card-text">Lorem ipsum dolor sit amet consectetur, adipisicing elit. Ad labore aliquid eos quo soluta sapiente dolore.</p>
+                {% if candidate.user.active == 0 %}
+                    <p class="text-danger">Ce compte n'est pas activé</p>
+                {% endif %}
+                <a class="btn btn-primary" href="{{ path('app_candidate_profil', {id: candidate.user.id}) }}" role="button">Voir le détail</a>
+            </div>
+            </div>
+        </div>
+    {% endfor %}
+    </section>
+{% endblock %}
+
+
+
