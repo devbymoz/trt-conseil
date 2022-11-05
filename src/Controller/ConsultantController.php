@@ -9,6 +9,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Doctrine\Persistence\ManagerRegistry;
+use Knp\Component\Pager\PaginatorInterface;
+use Symfony\Component\HttpFoundation\Request;
 
 #[Route('/consultant')]
 #[IsGranted('ROLE_CONSULTANT')]
@@ -22,10 +24,19 @@ class ConsultantController extends AbstractController
 
 
     #[Route('/listing-candidate', name: 'app_listing_candidate')]
-    public function listingCandidate(ManagerRegistry $doctrine): Response
+    public function listingCandidate(
+        Request $request,
+        PaginatorInterface $paginator,
+        ManagerRegistry $doctrine): Response
     {
         $repo = $doctrine->getRepository(Candidate::class);
-        $candidates = $repo->findAll();
+        $data = $repo->findAll();
+
+        $candidates = $paginator->paginate(
+            $data,
+            $request->query->getInt('page', 1),
+            8
+        );
 
         return $this->render('consultant/listing-candidate.html.twig', [
             'candidates' => $candidates
@@ -34,10 +45,20 @@ class ConsultantController extends AbstractController
 
 
     #[Route('/listing-company', name: 'app_listing_company')]
-    public function listingCompany(ManagerRegistry $doctrine): Response
+    public function listingCompany(
+        ManagerRegistry $doctrine,
+        Request $request,
+        PaginatorInterface $paginator
+    ): Response
     {
         $repo = $doctrine->getRepository(Company::class);
-        $companies = $repo->findAll();
+        $data = $repo->findAll();
+
+        $companies = $paginator->paginate(
+            $data,
+            $request->query->getInt('page', 1),
+            8
+        );
 
         return $this->render('consultant/listing-company.html.twig', [
             'companies' => $companies

@@ -1,0 +1,44 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Créer une nouvelle annonce{% endblock %}
+{% block title_h1 %}Créer une offre d'emploi{% endblock %}
+
+{% block body %}
+    <h2 class="text-center"></h2>
+    <p class="text-center">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+
+    {% for flash_error in app.flashes('verify_email_error') %}
+        <div class="alert alert-danger" role="alert">{{ flash_error }}</div>
+    {% endfor %}
+
+    <div class="mt-4">
+        {{ form_start(adForm) }}
+            <div class="input-group input-group-lg mb-3">
+                {{ form_widget(adForm.name) }}
+            </div>
+            {{ form_errors(adForm.name) }}
+
+            <div class="input-group input-group-lg mb-3">
+                {{ form_widget(adForm.salary) }}
+            </div>
+            {{ form_errors(adForm.salary) }}
+
+            <div class="input-group input-group-lg mb-3">
+                {{ form_widget(adForm.hourly) }}
+            </div>
+            {{ form_errors(adForm.hourly) }}
+
+            <div class="input-group input-group-lg mb-3">
+                {{ form_widget(adForm.address) }}
+            </div>
+            {{ form_errors(adForm.address) }}
+
+            <div class="input-group input-group-lg mb-3">
+                {{ form_widget(adForm.description) }}
+            </div>
+            {{ form_errors(adForm.description) }}
+
+            <button type="submit" class="btn btn-primary btn-lg">Déposer mon annonce</button>
+        {{ form_end(adForm) }}
+    </div>
+{% endblock %}

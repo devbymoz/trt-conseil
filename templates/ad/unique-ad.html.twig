@@ -1,0 +1,26 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ ad.name }}{% endblock %}
+{% block title_h1 %}{{ ad.name }}{% endblock %}
+
+{% block body %}
+    <h2 class="text-center">{{ ad.company.name }}</h2>
+    <p class="text-center">{{ ad.address }}</p>
+    {% if ad.active == 0 and is_granted('ROLE_CONSULTANT') %}
+        <div class="text-center mb-4">
+            <a class="btn btn-warning confirm-js" href="{{ path('app_ad_activate', {id:ad.id}) }}" role="button">Activer cette annonce</a>
+        </div>
+    {% endif %}
+
+    <p>{{ ad.description }}</p>
+    <p>Salaire : {{ ad.salary }}euros</p>
+    <p>Horaire quotidien : {{ ad.hourly }}</p>
+
+    {% if 'ROLE_CANDIDATE' in app.user.roles|first %}
+        {% if app.user.candidate.cv == null %}
+            <p class="text-danger">Vous devez ajouter votre CV pour postuler aux offres</p>
+        {% else %}
+            <a href="#" class="btn btn-primary">Postuler</a>  
+        {% endif %}
+    {% endif %}
+{% endblock %}
