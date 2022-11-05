@@ -1,0 +1,32 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mes annonces{% endblock %}
+{% block title_h1 %}Mes annonces{% endblock %}
+
+{% block body %}
+    <section class="row mt-5">
+        {% for ad in ads %}
+            <div class="col-sm-6 mb-4">       
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ ad.name }}</h5>
+                        <p class="card-text">{{ ad.description }}</p>
+                        {% if ad.active == 0 %}
+                            <button class="btn btn-warning confirm-js">Pas encore activé</button>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer text-muted">
+                        <a href="{{ path('app_unique_ad', {id:ad.id}) }}">Plus de détails</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </section>
+    <div class="mb-5">
+        {{ knp_pagination_render(ads) }}
+    </div>
+
+{% endblock %}
+
+
+

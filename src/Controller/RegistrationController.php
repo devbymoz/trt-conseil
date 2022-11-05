@@ -195,7 +195,7 @@ class RegistrationController extends AbstractController
     }
 
 
-    #[Route('/create-password/{id}/{token}', name: 'app_create_password')]
+    #[Route('/create-password/{id<\d+>}/{token}', name: 'app_create_password')]
     public function createPassword(
         $id,
         $token,

@@ -1,0 +1,41 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des annonces{% endblock %}
+{% block title_h1 %}Liste des offres d'emploi{% endblock %}
+
+{% block body %}
+    <section class="row mt-5">
+        {% for ad in ads %}
+            <div class="col-sm-6 mb-4">       
+                <div class="card text-center">
+                    <div class="card-header">
+                        {{ ad.company.name }}
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ ad.name }}</h5>
+                        <p class="card-text">{{ ad.description }}</p>
+                        {% if ad.active == 0 and is_granted('ROLE_CONSULTANT') %}
+                            <a class="btn btn-warning confirm-js" href="{{ path('app_ad_activate', {id:ad.id}) }}" role="button">Activer cette annonce</a>
+                        {% endif %}
+                        {% if 'ROLE_CANDIDATE' in app.user.roles|first %}
+                            {% if app.user.candidate.cv == null %}
+                                <p class="text-danger">Vous devez ajouter votre CV pour postuler aux offres</p>
+                            {% else %}
+                                <a href="#" class="btn btn-primary">Postuler</a>  
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <div class="card-footer text-muted">
+                        <a href="{{ path('app_unique_ad', {id:ad.id}) }}">Plus de détails</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </section>
+    <div class="mb-5">
+        {{ knp_pagination_render(ads) }}
+    </div>
+{% endblock %}
+
+
+

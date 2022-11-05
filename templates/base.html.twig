@@ -20,11 +20,22 @@
                 <div class="collapse navbar-collapse justify-content-end" id="navbarNavDropdown">
                     <ul class="navbar-nav mr-auto">
                         {% if app.user %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ path('app_ad_listing') }}">Liste des annonces</a>
+                            </li>
+                        {% endif %}
+                        {% if app.user %}
                             {% if 'ROLE_CANDIDATE' in app.user.roles|first %}
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ path('app_candidate_profil', {id:app.user.id}) }}">Mon profil</a>
                                 </li>
                             {% elseif 'ROLE_COMPANY' in app.user.roles|first %}
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ path('app_create_ad') }}">Déposer une annonce</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ path('app_my_ads') }}">Mes annonces</a>
+                                </li>
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ path('app_company_profil', {id:app.user.id}) }}">Mon profil</a>
                                 </li>
