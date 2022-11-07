@@ -102,7 +102,7 @@ class AdController extends AbstractController
         }
 
         // Si l'utilisateur est un candidat, l'annonce doit etre actif
-        if ($this->isGranted('ROLE_CANDIDATE') && $ad->isActive() == 0) {
+        if ($this->isGranted('ROLE_CANDIDAT') && $ad->isActive() == 0) {
             throw new AccessDeniedException('Vous ne pouvez pas accéder à cette annonce');
         }
 
