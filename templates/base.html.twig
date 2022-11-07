@@ -21,11 +21,14 @@
                     <ul class="navbar-nav mr-auto">
                         {% if app.user %}
                             <li class="nav-item">
-                                <a class="nav-link" href="{{ path('app_ad_listing') }}">Liste des annonces</a>
+                                <a class="nav-link" href="{{ path('app_ad_listing') }}">Annonces</a>
                             </li>
                         {% endif %}
                         {% if app.user %}
                             {% if 'ROLE_CANDIDATE' in app.user.roles|first %}
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ path('app_my_candidacies', {id:app.user.id}) }}">Mes candidatures</a>
+                                </li>
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ path('app_candidate_profil', {id:app.user.id}) }}">Mon profil</a>
                                 </li>
@@ -37,17 +40,20 @@
                                     <a class="nav-link" href="{{ path('app_my_ads') }}">Mes annonces</a>
                                 </li>
                                 <li class="nav-item">
+                                    <a class="nav-link" href="{{ path('app_candidacies_company') }}">Candidatures</a>
+                                </li>
+                                <li class="nav-item">
                                     <a class="nav-link" href="{{ path('app_company_profil', {id:app.user.id}) }}">Mon profil</a>
                                 </li>
                             {% elseif 'ROLE_CONSULTANT' in app.user.roles|first %}
                                 <li class="nav-item">
-                                    <a class="nav-link" href="{{ path('app_listing_candidate') }}">Liste des candidats</a>
+                                    <a class="nav-link" href="{{ path('app_listing_candidate') }}">Candidats</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="{{ path('app_listing_company') }}">Liste des recruteurs</a>
+                                    <a class="nav-link" href="{{ path('app_listing_company') }}">Recruteurs</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="/">CONSULTANT</a>
+                                    <a class="nav-link" href="{{ path('app_candidacy_listing') }}">Candidatures</a>
                                 </li>
                             {% elseif 'ROLE_ADMIN' in app.user.roles|first %}
                                 <li class="nav-item">

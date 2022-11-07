@@ -4,11 +4,13 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Form\CreateCompanyType;
+use App\Repository\CandidacyRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\Persistence\ManagerRegistry;
+use Knp\Component\Pager\PaginatorInterface;
 use Psr\Log\LoggerInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Component\Mailer\MailerInterface;
@@ -138,5 +140,32 @@ class CompanyController extends AbstractController
         return $this->redirectToRoute('app_company_profil', ['id' => $id]);
     }
 
+
+    #[Route('/candidacies-listing', name: 'app_candidacies_company')]
+    #[IsGranted('ROLE_COMPANY')]
+    public function candidaciesListing(
+        Request $request,
+        PaginatorInterface $paginator,
+        CandidacyRepository $candidacyRepo
+    ): Response {
+        if (!$this->getUser()) {
+            return $this->redirectToRoute('app_login');
+        }
+
+        $company = $this->getUser()->getCompany();
+        
+        // Requete pour récupérer les candidatures de la compagnie
+        $data = $candidacyRepo->findByCompanyAd($company->getId());
+        
+        $candidacies = $paginator->paginate(
+            $data,
+            $request->query->getInt('page', 1),
+            8
+        );
+
+        return $this->render('company/candidacies-listing.html.twig', [
+            'candidacies' => $candidacies
+        ]);
+    }
 
 }
