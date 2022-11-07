@@ -49,11 +49,6 @@ Voici un exemple de cette variable avec MySQL :
   composer install
 ```
 
-Création du fichier HTACCESS
-```bash
-  composer require symfony/apache-pack
-```
-
 **4. Création de la BDD**
 
 Si votre BDD est déjà créée vous pouvez ignorer cette étape.
@@ -69,7 +64,7 @@ Si vous rencontrez une erreur en lancant cette commande, verifiez que votre BDD 
 
 **6. Création des fixtures**
 
-Cette commande permet de créer 245 utilisateurs, 93 entreprises, 150 candidats et 106 offres d'emploi :
+Cette commande permet de créer 245 utilisateurs, 93 entreprises, 100 candidats et 106 offres d'emploi :
 
 ```bash
   php bin/console doctrine:fixtures:load --append
