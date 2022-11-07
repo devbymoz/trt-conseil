@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Candidacy;
 use App\Entity\User;
 use App\Form\CreateCandidateType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -9,6 +10,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\Persistence\ManagerRegistry;
+use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\String\Slugger\SluggerInterface;
 use Psr\Log\LoggerInterface;
@@ -175,7 +177,32 @@ class CandidateController extends AbstractController
     }
 
 
+    #[Route('/my-candidacies', name: 'app_my_candidacies')]
+    #[IsGranted('ROLE_CANDIDATE')]
+    public function myCandidacies(
+        ManagerRegistry $doctrine,
+        Request $request,
+        PaginatorInterface $paginator
+    ): Response {
+        if (!$this->getUser()) {
+            return $this->redirectToRoute('app_login');
+        }
 
+        $repo = $doctrine->getRepository(Candidacy::class);
+
+        $candidate = $this->getUser()->getCandidate();
+        $data = $repo->findBy(['candidate' => $candidate->getId()]);
+
+        $myCandidacies = $paginator->paginate(
+            $data,
+            $request->query->getInt('page', 1),
+            8
+        );
+
+        return $this->render('candidate/my-candidacies.html.twig', [
+            'myCandidacies' => $myCandidacies
+        ]);
+    }
 
 
 }

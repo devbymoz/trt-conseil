@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Ad;
+use App\Entity\Candidacy;
 use App\Form\CreateAdType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -14,6 +15,7 @@ use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Knp\Component\Pager\PaginatorInterface;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 class AdController extends AbstractController
@@ -128,6 +130,7 @@ class AdController extends AbstractController
         $id,
         ManagerRegistry $doctrine,
         LoggerInterface $logger,
+        Request $request,
         MailerInterface $mailer
     ): Response {
         $em = $doctrine->getManager();
@@ -171,7 +174,8 @@ class AdController extends AbstractController
             );
         }
 
-        return $this->redirectToRoute('app_unique_ad', ['id' => $id]);
+        $route = $request->headers->get('referer');
+        return $this->redirect($route);
     }
 
 
@@ -237,6 +241,182 @@ class AdController extends AbstractController
         ]);
     }
 
+
+    #[Route('/postule-ad/{id<\d+>}', name: 'app_postule_ad')]
+    #[IsGranted('ROLE_CANDIDATE')]
+    public function postuleAd(
+        $id,
+        ManagerRegistry $doctrine,
+        LoggerInterface $logger,
+        Request $request,
+        MailerInterface $mailer
+    ): Response {
+        $em = $doctrine->getManager();
+        $repo = $doctrine->getRepository(Ad::class);
+        $ad = $repo->findOneBy(['id' => $id]);
+    
+        // On vérifie que l'annonce existe et qu'elle est actif
+        if (empty($ad) || !$ad->isActive()) {
+            throw $this->createNotFoundException('Cet annonce n\'existe pas');
+        }
+
+        // Seul un candidat peut postuler
+        if (!$this->isGranted('ROLE_CANDIDATE')) {
+            throw new AccessDeniedException('Vous ne pouvez pas postuler');
+        }
+
+        $candidate = $this->getUser()->getCandidate();
+
+        // Si le candidat n'a pas ajouté son CV, il ne peut pas postuler
+        if (empty($candidate->getCV())) {
+            throw new AccessDeniedException('Vous devez ajouter votre CV pour postuler');
+        }
+
+        // On vérifie que le candidat n'a pas déjà postuler à cette annonce.
+        foreach ($candidate->getCandidacies() as $value) {
+            if ($value->getAd()->getId() == $ad->getId()) {
+                throw new HttpException(409, 'Vous avez déjà postulé à cette offre');
+            }
+        }
+       
+        // On initialise une nouvelle candidature
+        $candidacy = new Candidacy();
+        $candidacy->setApprove(0);
+        $candidacy->setCandidate($candidate);
+        $candidacy->setAd($ad);
+
+        $candidate->addCandidacy($candidacy);
+
+        try {
+            $em->persist($candidacy);
+            $em->flush();
+
+            $sendEmail = new TemplatedEmail();
+            $sendEmail->from('TRT Conseil <noreply@trtconseil.com>');
+            $sendEmail->to('mz.24@outlook.fr');
+            $sendEmail->replyTo('noreply@trtconseil.com');
+            $sendEmail->subject('Nouvelle candidature');
+            $sendEmail->text('Votre offre d\'emploi a bien été validée');
+            $mailer->send($sendEmail);
+
+            $this->addFlash(
+                'success',
+                'Votre candidature a bien été prise en compte'
+            );
+        } catch (\Exception $e) {
+            $errorNumber = uniqid();
+            $logger->error('Erreur lors de la candidature', [
+                'errorNumber' => $errorNumber,
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            $this->addFlash(
+                'exception',
+                'Une erreur est survenue lors de la candidature'
+            );
+        }
+
+        $route = $request->headers->get('referer');
+        return $this->redirect($route);
+    }
+
+
+
+    #[Route('/candidacy-listing', name: 'app_candidacy_listing')]
+    #[IsGranted('ROLE_CONSULTANT')]
+    public function candidacyListing(
+        ManagerRegistry $doctrine,
+        Request $request,
+        PaginatorInterface $paginator
+    ): Response {
+        if (!$this->getUser()) {
+            return $this->redirectToRoute('app_login');
+        }
+
+        $repo = $doctrine->getRepository(Candidacy::class);
+
+        $data = $repo->findAll();
+
+        $candidacies = $paginator->paginate(
+            $data,
+            $request->query->getInt('page', 1),
+            8
+        );
+
+        return $this->render('ad/candidacy-listing.html.twig', [
+            'candidacies' => $candidacies
+        ]);
+    }
+
+
+    #[Route('/candidacy/{id<\d+>}/activate', name: 'app_candidacy_activate')]
+    #[IsGranted('ROLE_CONSULTANT')]
+    public function activateCandidacy(
+        $id,
+        ManagerRegistry $doctrine,
+        LoggerInterface $logger,
+        MailerInterface $mailer,
+        Request $request
+    ): Response {
+        $em = $doctrine->getManager();
+        $repo = $doctrine->getRepository(Candidacy::class);
+        $candidacy = $repo->findOneBy(['id' => $id]);
+
+        // On vérifie que la candidature existe
+        if (empty($candidacy)) {
+            throw $this->createNotFoundException('Cet candidature n\'existe pas');
+        }
+
+        $candidacy->setApprove(1);
+        $user = $candidacy->getCandidate()->getUser();
+        $company = $candidacy->getAd()->getCompany();
+
+        try {
+            $em->persist($candidacy);
+            $em->flush();
+
+            // On confirme la validation au condidat
+            $sendEmail = new TemplatedEmail();
+            $sendEmail->from('TRT Conseil <noreply@trtconseil.com>');
+            $sendEmail->to($user->getEmail());
+            $sendEmail->replyTo('noreply@trtconseil.com');
+            $sendEmail->subject('Votre candidature a été validée');
+            $sendEmail->text('Votre candidature a bien été validée');
+            $mailer->send($sendEmail);
+
+            // On envoi la candidature au recruteur
+            $sendEmail2 = new TemplatedEmail();
+            $sendEmail2->from('TRT Conseil <noreply@trtconseil.com>');
+            $sendEmail2->to($company->getUser()->getEmail());
+            $sendEmail2->replyTo('noreply@trtconseil.com');
+            $sendEmail2->subject('Voici une nouvelle candidature');
+            $sendEmail2->context([
+                'candidate' => $candidacy->getCandidate(),
+                'ad' => $candidacy->getAd()
+            ]);
+            $sendEmail2->htmlTemplate('ad/new-candidacy_email.html.twig');
+            $mailer->send($sendEmail2);
+
+            $this->addFlash(
+                'success',
+                'La candidature a bien été activée'
+            );
+        } catch (\Exception $e) {
+            $errorNumber = uniqid();
+            $logger->error('Erreur d\'activation de la candidature', [
+                'errorNumber' => $errorNumber,
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            $this->addFlash(
+                'exception',
+                'Une erreur est survenue lors de l\'activation de la candidature'
+            );
+        }
+
+        $route = $request->headers->get('referer');
+        return $this->redirect($route);
+    }
 
 
 

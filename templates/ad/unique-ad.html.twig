@@ -19,8 +19,22 @@
     {% if 'ROLE_CANDIDATE' in app.user.roles|first %}
         {% if app.user.candidate.cv == null %}
             <p class="text-danger">Vous devez ajouter votre CV pour postuler aux offres</p>
-        {% else %}
-            <a href="#" class="btn btn-primary">Postuler</a>  
+        {% endif %}
+
+        {% set alreadyCandidacy = null %}
+        {# Si le candidat a déja postulé #}
+        {% for candidacy in app.user.candidate.candidacies %}
+            {% if candidacy.ad.id == ad.id and candidacy.approve == 0 %}
+            {% set alreadyCandidacy = candidacy.ad.id %}
+                <p class="bg-dark text-light p-3 rounded">Votre candidature doit être vérifiée par un admin</p>
+            {% elseif candidacy.ad.id == ad.id and candidacy.approve == 1 %}
+                {% set alreadyCandidacy = candidacy.ad.id %}
+                <p class="bg-success text-light p-3 rounded">Votre candidature a bien été envoyé au recruteur</p>
+            {% endif %}
+        {% endfor %}
+
+        {% if alreadyCandidacy == null %}
+            <a href="{{ path('app_postule_ad', {id:ad.id}) }}" class="btn btn-primary">Postuler</a> 
         {% endif %}
     {% endif %}
 {% endblock %}

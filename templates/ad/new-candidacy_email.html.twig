@@ -1,0 +1,8 @@
+<h1>Voici une nouvelle candidature pour votre annonce : {{ ad.name }}</h1>
+<p>
+    Voici le profil du candidat : <br><br>
+    <p>Nom : {{ candidate.firstname }}</p>
+    <p>Prénom : {{ candidate.lastname }}</p>
+    <p>CV : <a href="{{ absolute_url(asset('cv/'~ candidate.cv )) }}">Voir le CV</a></p>
+</p>
+

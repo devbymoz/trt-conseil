@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des candidatures{% endblock %}
+{% block title_h1 %}Liste des candidatures{% endblock %}
+
+{% block body %}
+    <section class="row mt-5">
+        {% for candidacy in candidacies %}
+            <div class="col-sm-6 mb-4">       
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ candidacy.candidate.firstname }} {{ candidacy.candidate.lastname }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <a href="{{ path('app_unique_ad', {id:candidacy.ad.id}) }}">{{ candidacy.ad.name }}</a>
+                        </h6>
+                        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                        <a href="/cv/{{ candidacy.candidate.cv }}">Voir le CV</a>
+                        <br>
+                        {% if candidacy.approve == 0 %}
+                            <a class="btn btn-warning confirm-js  mt-3" href="{{ path('app_candidacy_activate', {id:candidacy.id}) }}" role="button">Valider la candidature</a>
+                        {% else %}
+                            <p class="bg-success text-light mt-3 p-1 rounded">Candidature déjà validée</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </section>
+
+    <div class="mb-5">
+        {{ knp_pagination_render(candidacies) }}
+    </div>
+{% endblock %}
+
+
+

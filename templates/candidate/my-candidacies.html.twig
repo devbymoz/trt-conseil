@@ -1,0 +1,30 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mes candidatures{% endblock %}
+{% block title_h1 %}Mes candidatures{% endblock %}
+
+{% block body %}
+<section class="row mt-5">
+        {% for candidacy in myCandidacies %}
+            <div class="col-sm-6 mb-4">       
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title"><a href="{{ path('app_unique_ad', {id:candidacy.ad.id}) }}">{{ candidacy.ad.name }}</a></h5>
+                        {% if candidacy.approve == 0 %}
+                            <p class="bg-warning mt-3 p-1 rounded">Pas encore validée</p>
+                        {% else %}
+                            <p class="bg-success text-light mt-3 p-1 rounded">Candidature validée</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </section>
+
+    <div class="mb-5">
+        {{ knp_pagination_render(myCandidacies) }}
+    </div>
+{% endblock %}
+
+
+

@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\AdRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 use DateTimeImmutable;
@@ -69,6 +71,9 @@ class Ad
     #[ORM\Column]
     private ?\DateTimeImmutable $createAt = null;
 
+    #[ORM\OneToMany(mappedBy: 'ad', targetEntity: Candidacy::class, orphanRemoval: true)]
+    private Collection $candidacies;
+
     /**
      * À l'instanciation d'une nouvelle annonce, on initialise :
      * - la date de création
@@ -78,6 +83,7 @@ class Ad
     {
         $this->createAt = new DateTimeImmutable('now', new DateTimeZone('Europe/Paris'));
         $this->active = 0;
+        $this->candidacies = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -177,6 +183,36 @@ class Ad
     public function setCreateAt(\DateTimeImmutable $createAt): self
     {
         $this->createAt = $createAt;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Candidacy>
+     */
+    public function getCandidacies(): Collection
+    {
+        return $this->candidacies;
+    }
+
+    public function addCandidacy(Candidacy $candidacy): self
+    {
+        if (!$this->candidacies->contains($candidacy)) {
+            $this->candidacies->add($candidacy);
+            $candidacy->setAd($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCandidacy(Candidacy $candidacy): self
+    {
+        if ($this->candidacies->removeElement($candidacy)) {
+            // set the owning side to null (unless already changed)
+            if ($candidacy->getAd() === $this) {
+                $candidacy->setAd(null);
+            }
+        }
 
         return $this;
     }

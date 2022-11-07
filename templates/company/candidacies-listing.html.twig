@@ -1,0 +1,30 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des candidatures{% endblock %}
+{% block title_h1 %}Liste des candidatures{% endblock %}
+
+{% block body %}
+    <section class="row mt-5">
+        {% for candidacy in candidacies %}
+            <div class="col-sm-6 mb-4">       
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ candidacy.candidate.firstname }} {{ candidacy.candidate.lastname }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            Pour le poste de : <a href="{{ path('app_unique_ad', {id:candidacy.ad.id}) }}">{{ candidacy.ad.name }}</a>
+                        </h6>
+                        <a href="/cv/{{ candidacy.candidate.cv }}">Voir le CV</a>
+                        <br>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </section>
+
+    <div class="mb-5">
+        {{ knp_pagination_render(candidacies) }}
+    </div>
+{% endblock %}
+
+
+
