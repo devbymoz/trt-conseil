@@ -34,7 +34,7 @@ class CandidateFixtures extends Fixture
             $user = new User();
             $user->setEmail($faker->unique()->companyEmail());
             $user->setActive(true);
-            $user->setRoles(['ROLE_CANDIATE']);
+            $user->setRoles(['ROLE_CANDIDATE']);
             $password = $this->hasher->hashPassword($user, '123456789');
             $user->setPassword($password);
 

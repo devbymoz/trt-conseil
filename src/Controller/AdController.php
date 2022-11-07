@@ -296,7 +296,7 @@ class AdController extends AbstractController
             $sendEmail->to('mz.24@outlook.fr');
             $sendEmail->replyTo('noreply@trtconseil.com');
             $sendEmail->subject('Nouvelle candidature');
-            $sendEmail->text('Votre offre d\'emploi a bien été validée');
+            $sendEmail->text('Vous devez valider une nouvelle candidature.');
             $mailer->send($sendEmail);
 
             $this->addFlash(
