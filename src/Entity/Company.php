@@ -39,10 +39,10 @@ class Company
     private ?string $address = null;
 
     #[ORM\OneToOne(inversedBy: 'company', cascade: ['persist', 'remove'])]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?User $user = null;
 
-    #[ORM\OneToMany(mappedBy: 'company', targetEntity: Ad::class)]
+    #[ORM\OneToMany(mappedBy: 'company', targetEntity: Ad::class, orphanRemoval: true)]
     private Collection $ads;
 
     public function __construct()

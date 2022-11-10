@@ -18,6 +18,11 @@
         </div>
     {% endif %}
 
+    {% if is_granted('ROLE_CONSULTANT') %}
+        <div class="text-center mt-3 mb-2">
+            <a href="{{ path('app_delete_company', {id:company.id, 'csrf_token':csrf_token('delete-company')}) }}" class="btn btn-danger confirm-js">Supprimer ce recruteur</a> 
+        </div>
+    {% endif %}
     <div class="mt-4">
         {{ form_start(registrationForm) }}
             <div class="input-group input-group-lg mb-3">

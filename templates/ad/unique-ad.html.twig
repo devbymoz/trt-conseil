@@ -8,12 +8,12 @@
     <p class="text-center">{{ ad.address }}</p>
     {% if ad.active == 0 and is_granted('ROLE_CONSULTANT') %}
         <div class="text-center mb-4">
-            <a class="btn btn-warning confirm-js" href="{{ path('app_ad_activate', {id:ad.id}) }}" role="button">Activer cette annonce</a>
+            <a class="btn btn-warning confirm-js" href="{{ path('app_ad_activate', {id:ad.id, 'csrf_token':csrf_token('activate')}) }}" role="button">Activer cette annonce</a>
         </div>
     {% endif %}
 
     <p>{{ ad.description }}</p>
-    <p>Salaire : {{ ad.salary }}euros</p>
+    <p>Salaire : {{ ad.salary }} euros</p>
     <p>Horaire quotidien : {{ ad.hourly }}</p>
 
     {% if 'ROLE_CANDIDATE' in app.user.roles|first %}
@@ -33,8 +33,13 @@
             {% endif %}
         {% endfor %}
 
-        {% if alreadyCandidacy == null %}
-            <a href="{{ path('app_postule_ad', {id:ad.id}) }}" class="btn btn-primary">Postuler</a> 
+        {% if alreadyCandidacy == null and app.user.candidate.cv != null %}
+            <a href="{{ path('app_postule_ad', {id:ad.id, 'csrf_token':csrf_token('postule')}) }}" class="btn btn-primary">Postuler</a> 
         {% endif %}
     {% endif %}
+
+    {% if is_granted('ROLE_CONSULTANT') %}
+        <a href="{{ path('app_ad_delete', {id:ad.id, 'csrf_token':csrf_token('delete-ad')}) }}" class="btn btn-danger confirm-js">Supprimer cette annonce</a> 
+    {% endif %}
+
 {% endblock %}

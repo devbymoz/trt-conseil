@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Company;
 use App\Entity\User;
 use App\Form\CreateCompanyType;
 use App\Repository\CandidacyRepository;
@@ -10,6 +11,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\Persistence\ManagerRegistry;
+use Exception;
 use Knp\Component\Pager\PaginatorInterface;
 use Psr\Log\LoggerInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
@@ -167,5 +169,75 @@ class CompanyController extends AbstractController
             'candidacies' => $candidacies
         ]);
     }
+
+    
+    #[Route('/delete/{id<\d+>}', name: 'app_delete_company')]
+    #[IsGranted('ROLE_CONSULTANT')]
+    public function deleteCompany(
+        $id,
+        ManagerRegistry $doctrine,
+        LoggerInterface $logger,
+        Request $request,
+        MailerInterface $mailer
+    ): Response {
+        // Vérification du token
+        $submittedToken = $request->get('csrf_token');
+
+        if ($this->isCsrfTokenValid('delete-company', $submittedToken)) {
+            $em = $doctrine->getManager();
+            $repo = $doctrine->getRepository(Company::class);
+            $company = $repo->findOneBy(['id' => $id]);
+
+            // On vérifie que la companie existe
+            if (empty($company)) {
+                throw $this->createNotFoundException('Ce recruteur n\'existe pas');
+            }
+
+            $user = $company->getUser();
+            $ads = $company->getAds();
+
+            try {
+                foreach($ads as $ad) {
+                    $company->removeAd($ad);
+                }
+                
+                $em->remove($company);
+                $em->remove($user);
+                $em->flush();
+
+                $sendEmail = new TemplatedEmail();
+                $sendEmail->from('TRT Conseil <noreply@trtconseil.com>');
+                $sendEmail->to($user->getEmail());
+                $sendEmail->replyTo('noreply@trtconseil.com');
+                $sendEmail->subject('Votre compte a été supprimé');
+                $sendEmail->text('Votre compte a été supprimée');
+                $mailer->send($sendEmail);
+
+                $this->addFlash(
+                    'success',
+                    'Le compte a bien été supprimée'
+                );
+            } catch (\Exception $e) {
+                $errorNumber = uniqid();
+                $logger->error('Erreur de suppression du compte', [
+                    'errorNumber' => $errorNumber,
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+                $this->addFlash(
+                    'exception',
+                    'Une erreur est survenue lors de la suppression du compte'
+                );
+            }
+        } else {
+            throw new Exception('CSRF Token Invalid');
+        }
+
+        return $this->redirectToRoute('app_listing_company');
+
+    }
+
+
+
 
 }

@@ -12,6 +12,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Component\Mailer\MailerInterface;
 use Doctrine\Persistence\ManagerRegistry;
+use Exception;
 use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Knp\Component\Pager\PaginatorInterface;
@@ -109,22 +110,20 @@ class AdController extends AbstractController
         $company = $this->getUser()->getCompany();
         // Si l'annonce n'est pas actif, seul un consultant ou le propriétaire peut y accéder
         if (
-            !$this->isGranted('ROLE_CONSULTANT') && 
-            $ad->isActive() == 0 && 
+            !$this->isGranted('ROLE_CONSULTANT') &&
+            $ad->isActive() == 0 &&
             $ad->getcompany()->getId() != $company->getId()
-            ) 
-        {
+        ) {
             throw new AccessDeniedException('Vous ne pouvez pas accéder à cette annonce');
         }
 
-        
         return $this->render('ad/unique-ad.html.twig', [
             'ad' => $ad
         ]);
     }
 
 
-    #[Route('/ad/{id<\d+>}/activate', name: 'app_ad_activate')]
+    #[Route('/ad/activate/{id<\d+>}', name: 'app_ad_activate')]
     #[IsGranted('ROLE_CONSULTANT')]
     public function activatead(
         $id,
@@ -133,45 +132,52 @@ class AdController extends AbstractController
         Request $request,
         MailerInterface $mailer
     ): Response {
-        $em = $doctrine->getManager();
-        $repo = $doctrine->getRepository(Ad::class);
-        $ad = $repo->findOneBy(['id' => $id]);
+        // Vérification du token
+        $submittedToken = $request->get('csrf_token');
 
-        // On vérifie que l'annonce existe
-        if (empty($ad)) {
-            throw $this->createNotFoundException('Cet annonce n\'existe pas');
-        }
+        if ($this->isCsrfTokenValid('activate', $submittedToken)) {
+            $em = $doctrine->getManager();
+            $repo = $doctrine->getRepository(Ad::class);
+            $ad = $repo->findOneBy(['id' => $id]);
 
-        $ad->setActive(1);
-        $user = $ad->getCompany()->getUser();
+            // On vérifie que l'annonce existe
+            if (empty($ad)) {
+                throw $this->createNotFoundException('Cet annonce n\'existe pas');
+            }
 
-        try {
-            $em->persist($user);
-            $em->flush();
+            $ad->setActive(1);
+            $user = $ad->getCompany()->getUser();
 
-            $sendEmail = new TemplatedEmail();
-            $sendEmail->from('TRT Conseil <noreply@trtconseil.com>');
-            $sendEmail->to($user->getEmail());
-            $sendEmail->replyTo('noreply@trtconseil.com');
-            $sendEmail->subject('Votre annonce est activé');
-            $sendEmail->text('Votre offre d\'emploi a bien été validée');
-            $mailer->send($sendEmail);
+            try {
+                $em->persist($user);
+                $em->flush();
 
-            $this->addFlash(
-                'success',
-                'L\'annonce a bien été activée'
-            );
-        } catch (\Exception $e) {
-            $errorNumber = uniqid();
-            $logger->error('Erreur d\'activation d\'annonce', [
-                'errorNumber' => $errorNumber,
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-            $this->addFlash(
-                'exception',
-                'Une erreur est survenue lors de l\'activation de l\'annonce'
-            );
+                $sendEmail = new TemplatedEmail();
+                $sendEmail->from('TRT Conseil <noreply@trtconseil.com>');
+                $sendEmail->to($user->getEmail());
+                $sendEmail->replyTo('noreply@trtconseil.com');
+                $sendEmail->subject('Votre annonce est activé');
+                $sendEmail->text('Votre offre d\'emploi a bien été validée');
+                $mailer->send($sendEmail);
+
+                $this->addFlash(
+                    'success',
+                    'L\'annonce a bien été activée'
+                );
+            } catch (\Exception $e) {
+                $errorNumber = uniqid();
+                $logger->error('Erreur d\'activation d\'annonce', [
+                    'errorNumber' => $errorNumber,
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+                $this->addFlash(
+                    'exception',
+                    'Une erreur est survenue lors de l\'activation de l\'annonce'
+                );
+            }
+        } else {
+            throw new Exception('CSRF Token Invalid');
         }
 
         $route = $request->headers->get('referer');
@@ -251,70 +257,78 @@ class AdController extends AbstractController
         Request $request,
         MailerInterface $mailer
     ): Response {
-        $em = $doctrine->getManager();
-        $repo = $doctrine->getRepository(Ad::class);
-        $ad = $repo->findOneBy(['id' => $id]);
-    
-        // On vérifie que l'annonce existe et qu'elle est actif
-        if (empty($ad) || !$ad->isActive()) {
-            throw $this->createNotFoundException('Cet annonce n\'existe pas');
-        }
+        // Vérification du token
+        $submittedToken = $request->get('csrf_token');
 
-        // Seul un candidat peut postuler
-        if (!$this->isGranted('ROLE_CANDIDATE')) {
-            throw new AccessDeniedException('Vous ne pouvez pas postuler');
-        }
+        if ($this->isCsrfTokenValid('postule', $submittedToken)) {
+            $em = $doctrine->getManager();
+            $repo = $doctrine->getRepository(Ad::class);
+            $ad = $repo->findOneBy(['id' => $id]);
 
-        $candidate = $this->getUser()->getCandidate();
-
-        // Si le candidat n'a pas ajouté son CV, il ne peut pas postuler
-        if (empty($candidate->getCV())) {
-            throw new AccessDeniedException('Vous devez ajouter votre CV pour postuler');
-        }
-
-        // On vérifie que le candidat n'a pas déjà postuler à cette annonce.
-        foreach ($candidate->getCandidacies() as $value) {
-            if ($value->getAd()->getId() == $ad->getId()) {
-                throw new HttpException(409, 'Vous avez déjà postulé à cette offre');
+            // On vérifie que l'annonce existe et qu'elle est actif
+            if (empty($ad) || !$ad->isActive()) {
+                throw $this->createNotFoundException('Cet annonce n\'existe pas');
             }
+
+            // Seul un candidat peut postuler
+            if (!$this->isGranted('ROLE_CANDIDATE')) {
+                throw new AccessDeniedException('Vous ne pouvez pas postuler');
+            }
+
+            $candidate = $this->getUser()->getCandidate();
+
+            // Si le candidat n'a pas ajouté son CV, il ne peut pas postuler
+            if (empty($candidate->getCV())) {
+                throw new AccessDeniedException('Vous devez ajouter votre CV pour postuler');
+            }
+
+            // On vérifie que le candidat n'a pas déjà postuler à cette annonce.
+            foreach ($candidate->getCandidacies() as $value) {
+                if ($value->getAd()->getId() == $ad->getId()) {
+                    throw new HttpException(409, 'Vous avez déjà postulé à cette offre');
+                }
+            }
+
+            // On initialise une nouvelle candidature
+            $candidacy = new Candidacy();
+            $candidacy->setApprove(0);
+            $candidacy->setCandidate($candidate);
+            $candidacy->setAd($ad);
+
+            $candidate->addCandidacy($candidacy);
+
+            try {
+                $em->persist($candidacy);
+                $em->flush();
+
+                $sendEmail = new TemplatedEmail();
+                $sendEmail->from('TRT Conseil <noreply@trtconseil.com>');
+                $sendEmail->to('mz.24@outlook.fr');
+                $sendEmail->replyTo('noreply@trtconseil.com');
+                $sendEmail->subject('Nouvelle candidature');
+                $sendEmail->text('Vous devez valider une nouvelle candidature.');
+                $mailer->send($sendEmail);
+
+                $this->addFlash(
+                    'success',
+                    'Votre candidature a bien été prise en compte'
+                );
+            } catch (\Exception $e) {
+                $errorNumber = uniqid();
+                $logger->error('Erreur lors de la candidature', [
+                    'errorNumber' => $errorNumber,
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+                $this->addFlash(
+                    'exception',
+                    'Une erreur est survenue lors de la candidature'
+                );
+            }
+        } else {
+            throw new Exception('CSRF Token Invalid');
         }
-       
-        // On initialise une nouvelle candidature
-        $candidacy = new Candidacy();
-        $candidacy->setApprove(0);
-        $candidacy->setCandidate($candidate);
-        $candidacy->setAd($ad);
 
-        $candidate->addCandidacy($candidacy);
-
-        try {
-            $em->persist($candidacy);
-            $em->flush();
-
-            $sendEmail = new TemplatedEmail();
-            $sendEmail->from('TRT Conseil <noreply@trtconseil.com>');
-            $sendEmail->to('mz.24@outlook.fr');
-            $sendEmail->replyTo('noreply@trtconseil.com');
-            $sendEmail->subject('Nouvelle candidature');
-            $sendEmail->text('Vous devez valider une nouvelle candidature.');
-            $mailer->send($sendEmail);
-
-            $this->addFlash(
-                'success',
-                'Votre candidature a bien été prise en compte'
-            );
-        } catch (\Exception $e) {
-            $errorNumber = uniqid();
-            $logger->error('Erreur lors de la candidature', [
-                'errorNumber' => $errorNumber,
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-            $this->addFlash(
-                'exception',
-                'Une erreur est survenue lors de la candidature'
-            );
-        }
 
         $route = $request->headers->get('referer');
         return $this->redirect($route);
@@ -358,66 +372,194 @@ class AdController extends AbstractController
         MailerInterface $mailer,
         Request $request
     ): Response {
-        $em = $doctrine->getManager();
-        $repo = $doctrine->getRepository(Candidacy::class);
-        $candidacy = $repo->findOneBy(['id' => $id]);
+        // Vérification du token
+        $submittedToken = $request->get('csrf_token');
 
-        // On vérifie que la candidature existe
-        if (empty($candidacy)) {
-            throw $this->createNotFoundException('Cet candidature n\'existe pas');
-        }
+        if ($this->isCsrfTokenValid('activate', $submittedToken)) {
+            $em = $doctrine->getManager();
+            $repo = $doctrine->getRepository(Candidacy::class);
+            $candidacy = $repo->findOneBy(['id' => $id]);
 
-        $candidacy->setApprove(1);
-        $user = $candidacy->getCandidate()->getUser();
-        $company = $candidacy->getAd()->getCompany();
+            // On vérifie que la candidature existe
+            if (empty($candidacy)) {
+                throw $this->createNotFoundException('Cet candidature n\'existe pas');
+            }
 
-        try {
-            $em->persist($candidacy);
-            $em->flush();
+            $candidacy->setApprove(1);
+            $user = $candidacy->getCandidate()->getUser();
+            $company = $candidacy->getAd()->getCompany();
 
-            // On confirme la validation au condidat
-            $sendEmail = new TemplatedEmail();
-            $sendEmail->from('TRT Conseil <noreply@trtconseil.com>');
-            $sendEmail->to($user->getEmail());
-            $sendEmail->replyTo('noreply@trtconseil.com');
-            $sendEmail->subject('Votre candidature a été validée');
-            $sendEmail->text('Votre candidature a bien été validée');
-            $mailer->send($sendEmail);
+            try {
+                $em->persist($candidacy);
+                $em->flush();
 
-            // On envoi la candidature au recruteur
-            $sendEmail2 = new TemplatedEmail();
-            $sendEmail2->from('TRT Conseil <noreply@trtconseil.com>');
-            $sendEmail2->to($company->getUser()->getEmail());
-            $sendEmail2->replyTo('noreply@trtconseil.com');
-            $sendEmail2->subject('Voici une nouvelle candidature');
-            $sendEmail2->context([
-                'candidate' => $candidacy->getCandidate(),
-                'ad' => $candidacy->getAd()
-            ]);
-            $sendEmail2->htmlTemplate('ad/new-candidacy_email.html.twig');
-            $mailer->send($sendEmail2);
+                // On confirme la validation au condidat
+                $sendEmail = new TemplatedEmail();
+                $sendEmail->from('TRT Conseil <noreply@trtconseil.com>');
+                $sendEmail->to($user->getEmail());
+                $sendEmail->replyTo('noreply@trtconseil.com');
+                $sendEmail->subject('Votre candidature a été validée');
+                $sendEmail->text('Votre candidature a bien été validée');
+                $mailer->send($sendEmail);
 
-            $this->addFlash(
-                'success',
-                'La candidature a bien été activée'
-            );
-        } catch (\Exception $e) {
-            $errorNumber = uniqid();
-            $logger->error('Erreur d\'activation de la candidature', [
-                'errorNumber' => $errorNumber,
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-            $this->addFlash(
-                'exception',
-                'Une erreur est survenue lors de l\'activation de la candidature'
-            );
+                // On envoi la candidature au recruteur
+                $sendEmail2 = new TemplatedEmail();
+                $sendEmail2->from('TRT Conseil <noreply@trtconseil.com>');
+                $sendEmail2->to($company->getUser()->getEmail());
+                $sendEmail2->replyTo('noreply@trtconseil.com');
+                $sendEmail2->subject('Voici une nouvelle candidature');
+                $sendEmail2->context([
+                    'candidate' => $candidacy->getCandidate(),
+                    'ad' => $candidacy->getAd()
+                ]);
+                $sendEmail2->htmlTemplate('ad/new-candidacy_email.html.twig');
+                $mailer->send($sendEmail2);
+
+                $this->addFlash(
+                    'success',
+                    'La candidature a bien été activée'
+                );
+            } catch (\Exception $e) {
+                $errorNumber = uniqid();
+                $logger->error('Erreur d\'activation de la candidature', [
+                    'errorNumber' => $errorNumber,
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+                $this->addFlash(
+                    'exception',
+                    'Une erreur est survenue lors de l\'activation de la candidature'
+                );
+            }
+        } else {
+            throw new Exception('CSRF Token Invalid');
         }
 
         $route = $request->headers->get('referer');
         return $this->redirect($route);
     }
 
+
+    #[Route('/ad/delete/{id<\d+>}', name: 'app_ad_delete')]
+    #[IsGranted('ROLE_CONSULTANT')]
+    public function deleteAd(
+        $id,
+        ManagerRegistry $doctrine,
+        LoggerInterface $logger,
+        Request $request,
+        MailerInterface $mailer
+    ): Response {
+        // Vérification du token
+        $submittedToken = $request->get('csrf_token');
+
+        if ($this->isCsrfTokenValid('delete-ad', $submittedToken)) {
+            $em = $doctrine->getManager();
+            $repo = $doctrine->getRepository(Ad::class);
+            $ad = $repo->findOneBy(['id' => $id]);
+
+            // On vérifie que l'annonce existe
+            if (empty($ad)) {
+                throw $this->createNotFoundException('Cet annonce n\'existe pas');
+            }
+
+            $user = $ad->getCompany()->getUser();
+
+            try {
+                $em->remove($ad);
+                $em->flush();
+
+                $sendEmail = new TemplatedEmail();
+                $sendEmail->from('TRT Conseil <noreply@trtconseil.com>');
+                $sendEmail->to($user->getEmail());
+                $sendEmail->replyTo('noreply@trtconseil.com');
+                $sendEmail->subject('Votre annonce a été supprimé');
+                $sendEmail->text('Votre offre d\'emploi a été supprimée');
+                $mailer->send($sendEmail);
+
+                $this->addFlash(
+                    'success',
+                    'L\'annonce a bien été supprimée'
+                );
+            } catch (\Exception $e) {
+                $errorNumber = uniqid();
+                $logger->error('Erreur de suppression d\'annonce', [
+                    'errorNumber' => $errorNumber,
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+                $this->addFlash(
+                    'exception',
+                    'Une erreur est survenue lors de la suppression de l\'annonce'
+                );
+            }
+        } else {
+            throw new Exception('CSRF Token Invalid');
+        }
+
+        return $this->redirectToRoute('app_ad_listing');
+
+    }
+
+
+    #[Route('/candidature/delete/{id<\d+>}', name: 'app_candidature_delete')]
+    #[IsGranted('ROLE_CONSULTANT')]
+    public function deleteCandidature(
+        $id,
+        ManagerRegistry $doctrine,
+        LoggerInterface $logger,
+        Request $request,
+        MailerInterface $mailer
+    ): Response {
+        // Vérification du token
+        $submittedToken = $request->get('csrf_token');
+
+        if ($this->isCsrfTokenValid('delete-candidature', $submittedToken)) {
+            $em = $doctrine->getManager();
+            $repo = $doctrine->getRepository(Candidacy::class);
+            $candidacy = $repo->findOneBy(['id' => $id]);
+
+            // On vérifie que la candidature existe
+            if (empty($candidacy)) {
+                throw $this->createNotFoundException('Cette candidature n\'existe pas');
+            }
+
+            $user = $candidacy->getCandidate()->getUser();
+            
+            try {
+                $em->remove($candidacy);
+                $em->flush();
+
+                $sendEmail = new TemplatedEmail();
+                $sendEmail->from('TRT Conseil <noreply@trtconseil.com>');
+                $sendEmail->to($user->getEmail());
+                $sendEmail->replyTo('noreply@trtconseil.com');
+                $sendEmail->subject('Votre candidature a été supprimée');
+                $sendEmail->text('Votre candidature a été supprimée');
+                $mailer->send($sendEmail);
+
+                $this->addFlash(
+                    'success',
+                    'La candidature a bien été supprimée'
+                );
+            } catch (\Exception $e) {
+                $errorNumber = uniqid();
+                $logger->error('Erreur de suppression d\'une candidature', [
+                    'errorNumber' => $errorNumber,
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+                $this->addFlash(
+                    'exception',
+                    'Une erreur est survenue lors de la suppression d\'une candidature'
+                );
+            }
+        } else {
+            throw new Exception('CSRF Token Invalid');
+        }
+
+        return $this->redirectToRoute('app_candidacy_listing');
+
+    }
 
 
 }

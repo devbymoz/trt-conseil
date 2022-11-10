@@ -66,6 +66,7 @@ class Ad
     private ?bool $active = null;
 
     #[ORM\ManyToOne(inversedBy: 'ads')]
+    #[ORM\JoinColumn(nullable: false)]
     private ?Company $company = null;
 
     #[ORM\Column]

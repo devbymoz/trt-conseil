@@ -17,10 +17,11 @@
                         <a href="/cv/{{ candidacy.candidate.cv }}">Voir le CV</a>
                         <br>
                         {% if candidacy.approve == 0 %}
-                            <a class="btn btn-warning confirm-js  mt-3" href="{{ path('app_candidacy_activate', {id:candidacy.id}) }}" role="button">Valider la candidature</a>
+                            <a class="btn btn-warning confirm-js  mt-3" href="{{ path('app_candidacy_activate', {id:candidacy.id, 'csrf_token':csrf_token('activate')}) }}" role="button">Valider la candidature</a>
                         {% else %}
                             <p class="bg-success text-light mt-3 p-1 rounded">Candidature déjà validée</p>
                         {% endif %}
+                        <a href="{{ path('app_candidature_delete', {id:candidacy.id, 'csrf_token':csrf_token('delete-candidature')}) }}" class="btn btn-danger confirm-js mt-3">Supprimer cette candidature</a> 
                     </div>
                 </div>
             </div>

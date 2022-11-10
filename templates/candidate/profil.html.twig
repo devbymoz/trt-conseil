@@ -14,10 +14,15 @@
     {% if candidate.user.active == 0 and is_granted('ROLE_CONSULTANT') %}
         <div class="text-center">
             <h3>Ce compte n'a pas encore été activé</h3>
-            <a class="btn btn-warning confirm-js" href="{{ path('app_candidate_activate', {id:candidate.user.id}) }}" role="button">Activer ce compte</a>
+            <a class="btn btn-warning confirm-js" href="{{ path('app_candidate_activate', {id:candidate.user.id, 'csrf_token':csrf_token('activate')}) }}" role="button">Activer ce compte</a>
         </div>
     {% endif %}
 
+    {% if is_granted('ROLE_CONSULTANT') %}
+        <div class="text-center mt-3 mb-2">
+            <a href="{{ path('app_delete_candidate', {id:candidate.id, 'csrf_token':csrf_token('delete-candidate')}) }}" class="btn btn-danger confirm-js">Supprimer ce candidat</a> 
+        </div>
+    {% endif %}
     <div class="mon-cv mb-3 text-center">
         {% if candidate.cv != null %}
             <a href="/cv/{{ candidate.cv }}">Voir mon CV</a>

@@ -15,7 +15,7 @@
                         <h5 class="card-title">{{ ad.name }}</h5>
                         <p class="card-text">{{ ad.description }}</p>
                         {% if ad.active == 0 and is_granted('ROLE_CONSULTANT') %}
-                            <a class="btn btn-warning confirm-js" href="{{ path('app_ad_activate', {id:ad.id}) }}" role="button">Activer cette annonce</a>
+                            <a class="btn btn-warning confirm-js" href="{{ path('app_ad_activate', {id:ad.id, 'csrf_token':csrf_token('activate')}) }}" role="button">Activer cette annonce</a>
                         {% endif %}
                         {% if 'ROLE_CANDIDATE' in app.user.roles|first %}
                             {% if app.user.candidate.cv == null %}
@@ -34,8 +34,8 @@
                                     {% endif %}
                                 {% endfor %}
 
-                                {% if alreadyCandidacy == null %}
-                                    <a href="{{ path('app_postule_ad', {id:ad.id}) }}" class="btn btn-primary">Postuler</a> 
+                                {% if alreadyCandidacy == null and app.user.candidate.cv != null %}
+                                    <a href="{{ path('app_postule_ad', {id:ad.id, 'csrf_token':csrf_token('postule')}) }}" class="btn btn-primary">Postuler</a> 
                                 {% endif %}
                         {% endif %}
                     </div>

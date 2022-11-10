@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Candidacy;
+use App\Entity\Candidate;
 use App\Entity\User;
 use App\Form\CreateCandidateType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -17,6 +18,7 @@ use Psr\Log\LoggerInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
+use Exception;
 
 
 #[Route('/candidate')]
@@ -59,7 +61,7 @@ class CandidateController extends AbstractController
         $currentCv = $user->getCandidate()->getCv();
         $pathCv = $cvDirectory . '/' . $currentCv;
 
-        
+
         if ($form->isSubmitted() && $form->isValid()) {
             $cv = $form->get('cv')->getData();
             if ($cv) {
@@ -86,7 +88,7 @@ class CandidateController extends AbstractController
                 if (file_exists($pathCv) && $currentCv != null) {
                     unlink($pathCv);
                 }
-                
+
                 $candidate->setCV($newFilename);
             }
 
@@ -125,53 +127,61 @@ class CandidateController extends AbstractController
         $id,
         ManagerRegistry $doctrine,
         LoggerInterface $logger,
-        MailerInterface $mailer
+        MailerInterface $mailer,
+        Request $request
     ): Response {
-        $em = $doctrine->getManager();
-        $repo = $doctrine->getRepository(User::class);
+        $submittedToken = $request->get('csrf_token');
 
-        $user = $repo->findOneBy(['id' => $id]);
+        if ($this->isCsrfTokenValid('activate', $submittedToken)) {
+            $em = $doctrine->getManager();
+            $repo = $doctrine->getRepository(User::class);
 
-        // On vérifie que l'utilisateur existe
-        if (empty($user)) {
-            throw $this->createNotFoundException('Cet utlilisateur n\'existe pas');
+            $user = $repo->findOneBy(['id' => $id]);
+
+            // On vérifie que l'utilisateur existe
+            if (empty($user)) {
+                throw $this->createNotFoundException('Cet utlilisateur n\'existe pas');
+            }
+
+            // On vérifie que l'utilisateur connecté peut accéder à la page profil ou qu'il est consultant
+            if ($this->denyAccessUnlessGranted('ROLE_CONSULTANT')) {
+                throw $this->createNotFoundException('Vous ne pouvez pas accéder à cette page');
+            }
+
+            $user->setActive(1);
+
+            try {
+                $em->persist($user);
+                $em->flush();
+
+                $sendEmail = new TemplatedEmail();
+                $sendEmail->from('TRT Conseil <noreply@trtconseil.com>');
+                $sendEmail->to($user->getEmail());
+                $sendEmail->replyTo('noreply@trtconseil.com');
+                $sendEmail->subject('Votre compte est activé');
+                $sendEmail->text('Votre compte candidat a bien été activé, vous pouvez vous connecter pour entrer en contact avec des recruteurs.');
+                $mailer->send($sendEmail);
+
+                $this->addFlash(
+                    'success',
+                    'Le compte a bien été activé'
+                );
+            } catch (\Exception $e) {
+                $errorNumber = uniqid();
+                $logger->error('Erreur d\'activation candidat', [
+                    'errorNumber' => $errorNumber,
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+                $this->addFlash(
+                    'exception',
+                    'Une erreur est survenue lors de l\'activation du compte'
+                );
+            }
+        } else {
+            throw new Exception('CSRF Token Invalid');
         }
 
-        // On vérifie que l'utilisateur connecté peut accéder à la page profil ou qu'il est consultant
-        if ($this->denyAccessUnlessGranted('ROLE_CONSULTANT')) {
-            throw $this->createNotFoundException('Vous ne pouvez pas accéder à cette page');
-        }
-
-        $user->setActive(1);
-
-        try {
-            $em->persist($user);
-            $em->flush();
-
-            $sendEmail = new TemplatedEmail();
-            $sendEmail->from('TRT Conseil <noreply@trtconseil.com>');
-            $sendEmail->to($user->getEmail());
-            $sendEmail->replyTo('noreply@trtconseil.com');
-            $sendEmail->subject('Votre compte est activé');
-            $sendEmail->text('Votre compte candidat a bien été activé, vous pouvez vous connecter pour entrer en contact avec des recruteurs.');
-            $mailer->send($sendEmail);
-
-            $this->addFlash(
-                'success',
-                'Le compte a bien été activé'
-            );
-        } catch (\Exception $e) {
-            $errorNumber = uniqid();
-            $logger->error('Erreur d\'activation candidat', [
-                'errorNumber' => $errorNumber,
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-            $this->addFlash(
-                'exception',
-                'Une erreur est survenue lors de l\'activation du compte'
-            );
-        }
 
         return $this->redirectToRoute('app_candidate_profil', ['id' => $id]);
     }
@@ -202,6 +212,72 @@ class CandidateController extends AbstractController
         return $this->render('candidate/my-candidacies.html.twig', [
             'myCandidacies' => $myCandidacies
         ]);
+    }
+
+
+    #[Route('/delete/{id<\d+>}', name: 'app_delete_candidate')]
+    #[IsGranted('ROLE_CONSULTANT')]
+    public function deleteCandidate(
+        $id,
+        ManagerRegistry $doctrine,
+        LoggerInterface $logger,
+        Request $request,
+        MailerInterface $mailer
+    ): Response {
+        // Vérification du token
+        $submittedToken = $request->get('csrf_token');
+
+        if ($this->isCsrfTokenValid('delete-candidate', $submittedToken)) {
+            $em = $doctrine->getManager();
+            $repo = $doctrine->getRepository(Candidate::class);
+            $candidate = $repo->findOneBy(['id' => $id]);
+
+            // On vérifie que l'annonce existe
+            if (empty($candidate)) {
+                throw $this->createNotFoundException('Ce candidat n\'existe pas');
+            }
+
+            $user = $candidate->getUser();
+            $candidacies = $candidate->getCandidacies();
+
+            try {
+                foreach($candidacies as $candidacy) {
+                    $candidate->removeCandidacy($candidacy);
+                }
+                $em->remove($candidate);
+                $em->remove($user);
+                $em->flush();
+
+                $sendEmail = new TemplatedEmail();
+                $sendEmail->from('TRT Conseil <noreply@trtconseil.com>');
+                $sendEmail->to($user->getEmail());
+                $sendEmail->replyTo('noreply@trtconseil.com');
+                $sendEmail->subject('Votre compte a été supprimé');
+                $sendEmail->text('Votre compte a été supprimée');
+                $mailer->send($sendEmail);
+
+                $this->addFlash(
+                    'success',
+                    'Le compte a bien été supprimée'
+                );
+            } catch (\Exception $e) {
+                $errorNumber = uniqid();
+                $logger->error('Erreur de suppression du compte', [
+                    'errorNumber' => $errorNumber,
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+                $this->addFlash(
+                    'exception',
+                    'Une erreur est survenue lors de la suppression du compte'
+                );
+            }
+        } else {
+            throw new Exception('CSRF Token Invalid');
+        }
+
+        return $this->redirectToRoute('app_listing_candidate');
+
     }
 
 
